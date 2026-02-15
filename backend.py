@@ -56,12 +56,12 @@ def schedul_appointment(request: AppointmentRequest, db: Session = Depends(get_d
     db.commit()
     db.refresh(new_appointment)
     new_appointment_return_object = appointmentResponse(
-        new_appointment.id,
-        new_appointment.patient_name,
-        new_appointment.reason,
-        new_appointment.start_time,
-        new_appointment.canceled,
-        new_appointment.created_at
+          id = new_appointment.id,
+          patient_name = new_appointment.patient_name,
+          reason = new_appointment.reason,
+          start_time = new_appointment.start_time,
+          canceled = new_appointment.canceled,
+          created_at = new_appointment.created_at
     )
      
     return new_appointment_return_object
@@ -91,7 +91,7 @@ def cancel_appointment(request: CancelAppointmentRequest, db: Session = Depends(
         return HTTPException(status_code=404, detail="No matching appointment for the details you provided")
     
     for appointment in appointments:
-        appointment.canceled == True
+        appointment.canceled = True
         
     
     db.commit()  
@@ -101,33 +101,37 @@ def cancel_appointment(request: CancelAppointmentRequest, db: Session = Depends(
 
    #list apppt 
 @app.get("/list_appointments/")
-def list_appointments(request: AppointmentRequest, db: Session = Depends(get_db)):   
-     start_dt = dt.datetime.combine(request.date, dt.time.min)
-     end_dt = start_dt + dt.timedelta(days=1)
-    
-     result = db.execute(
+def list_appointments(date: dt.date, db: Session = Depends(get_db)):   
+
+    start_dt = dt.datetime.combine(date, dt.time.min)
+    end_dt = start_dt + dt.timedelta(days=1)
+
+    result = db.execute(
         select(Appointment)
         .where(Appointment.canceled == False)
         .where(Appointment.start_time >= start_dt)
         .where(Appointment.start_time < end_dt)
         .order_by(Appointment.start_time.asc())
-     )
-     booked_appointments = []
-     for appointment in result:
-         appointment_obj = appointmentResponse(
-             appointment.id,
-             appointment.patient_name,
-             appointment.reason,
-             appointment.start_time,
-             appointment.canceled,
-             appointment.created_at
-         )
-         
-         appointment_obj.append(booked_appointments)
-         
-         
-         return booked_appointments
-         
+    )
+
+    appointments = result.scalars().all()   # ✅ FIX HERE
+
+    booked_appointments = []
+
+    for appointment in appointments:
+        appointment_obj = appointmentResponse(
+            id=appointment.id,
+            patient_name=appointment.patient_name,
+            reason=appointment.reason,
+            start_time=appointment.start_time,
+            canceled=appointment.canceled,
+            created_at=appointment.created_at
+        )
+
+        booked_appointments.append(appointment_obj)
+
+    return booked_appointments   # ✅ return OUTSIDE loop
+
      
 import uvicorn
 
